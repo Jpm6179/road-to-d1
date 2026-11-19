@@ -106,6 +106,14 @@ ul.demos a span{color:var(--orange)}
 .hidden{display:none}
 .note{font-size:12.5px;color:var(--muted)}
 .kbd{color:var(--volt);font-weight:800}
+
+#player{position:fixed;inset:0;background:var(--bg);z-index:70;overflow-y:auto;padding:20px 16px 48px}
+.bigset{font-size:60px;font-weight:900;letter-spacing:.5px;line-height:1.05}
+.rbtn{width:44px;height:44px;border-radius:12px;border:1px solid var(--line);background:var(--panel2);color:var(--text);font-weight:800;font-size:16px}
+.rbtn.sel{background:var(--volt);color:#111;border-color:var(--volt)}
+table.bench{width:100%;border-collapse:collapse;font-size:13.5px}
+table.bench td,table.bench th{padding:7px 6px;border-bottom:1px solid var(--line);text-align:right}
+table.bench td:first-child,table.bench th:first-child{text-align:left}
 </style>
 </head>
 <body>
@@ -131,6 +139,7 @@ ul.demos a span{color:var(--orange)}
   <main id="view-playbook" class="hidden"></main>
 </div>
 
+<div id="player" class="hidden"></div>
 <nav class="tabs">
   <button data-v="home" class="on">Today</button>
   <button data-v="cal">Calendar</button>
@@ -210,7 +219,8 @@ function sessionFor(date){
   const base = BASE[k]; if(base===undefined) return null;
   const wk = wkOf(day), [pct, deload] = adjPct(base, wk);
   const [ss, sr] = SETS[k], [cs, cr] = CLSETS[k];
-  const sqW = r5(tm("squat")*pct), beW = r5(tm("bench")*pct), clW = r5(tm("clean")*pct);
+  const rf = (iso(date)===iso(new Date()) && S.readiness && S.readiness[iso(date)]) ? readyFactorOf(S.readiness[iso(date)]) : 1;
+  const sqW = r5(tm("squat")*pct*rf), beW = r5(tm("bench")*pct*rf), clW = r5(tm("clean")*pct*rf);
   const sN = deload? Math.max(3, ss-1) : ss, bN = sN, cN = deload? Math.max(3, cs-1) : cs;
   const plusTxt = deload? "Deload week — light and fast, leave fresh." :
     "Last set is a PLUS set: as many strong reps as you can with perfect form. Beat the target by 2+ and next month's max jumps.";
@@ -261,6 +271,339 @@ function sessionFor(date){
 }
 </script>
 <script>
+/* ===== Readiness ===== */
+let RD = {sleep:4, sore:4, energy:4};
+function readyFactorOf(r){
+  const avg = (r.sleep + r.sore + r.energy) / 3;
+  if (avg >= 4.5) return 1;
+  if (avg >= 3.5) return 0.975;
+  if (avg >= 2.5) return 0.95;
+  return 0.90;
+}
+function readyCardHTML(di){
+  const sess = sessionFor(new Date(di + "T12:00:00"));
+  if (!sess || sess.kind === "rest" || sess.kind === "test") return "";
+  const r = S.readiness && S.readiness[di];
+  if (r){
+    const avg = ((r.sleep + r.sore + r.energy) / 3).toFixed(1);
+    const f = readyFactorOf(r);
+    return `<div class="card"><span class="tag ${f===1?"hot":""}">Readiness ${avg}/5</span>
+      <h2 style="margin-top:8px">${f===1 ? "Green — full weights today" : "Main lifts scaled to " + Math.round(f*100) + "%"}</h2>
+      <div class="note">Sleep ${r.sleep} · Freshness ${r.sore} (5 = fresh) · Energy ${r.energy}. Today's squat / bench / clean weights already reflect this.</div>
+      <button class="btn small ghost" style="margin-top:10px" onclick="redoReady('${di}')">Redo check-in</button></div>`;
+  }
+  const row = (k2, label) => `<div style="display:flex;align-items:center;gap:8px;margin:8px 0">
+    <div style="width:86px;font-weight:700;font-size:14px">${label}</div>
+    ${[1,2,3,4,5].map(n=>`<button class="rbtn ${RD[k2]===n?"sel":""}" onclick="setRD('${k2}',${n})">${n}</button>`).join("")}</div>`;
+  return `<div class="card" style="border-color:var(--orange)"><span class="tag hot">Before you train</span>
+    <h2 style="margin-top:8px">Readiness Check — 30 Seconds</h2>
+    <div class="note">How do you actually feel? Be honest — a scaled day you complete beats a hero day that buries you. Your answers set today's main-lift weights.</div>
+    ${row("sleep","Sleep")}
+    ${row("sore","Freshness")}
+    ${row("energy","Energy")}
+    <button class="btn" style="width:100%;margin-top:10px" onclick="saveReady('${di}')">Set Today's Weights</button></div>`;
+}
+function setRD(k, n){ RD[k] = n; renderHome(); }
+function saveReady(di){ S.readiness = S.readiness || {}; S.readiness[di] = {...RD}; save(); renderHome(); }
+function redoReady(di){ delete S.readiness[di]; save(); renderHome(); }
+
+/* ===== Plates ===== */
+function plateCalc(total){
+  if (!total || total <= 45) return "bar only";
+  let side = (total - 45) / 2; const out = [];
+  [45,35,25,10,5,2.5].forEach(pl => { const c = Math.floor(side / pl); if (c > 0){ out.push(c + "×" + pl); side -= c * pl; } });
+  return out.length ? out.join(" + ") : "bar only";
+}
+function plateOut(){ const v = parseFloat($("#plate-in").value); $("#plate-out").textContent = isNaN(v) ? "" : "Per side: " + plateCalc(v); }
+
+/* ===== Embedded videos ===== */
+const VID = { squat:"gcNh17Ckjgg", bench:"4Y2ZdHCOXok", clean:"uFB9cDXAXU0" };
+const VID_NAME = { "Nordic Curl Eccentrics":"F-AaE8mw_pY" };
+function vidFor(e){ return VID[e.demo] || VID_NAME[e.n] || null; }
+function toggleVid(e, id){
+  e.preventDefault();
+  const el = document.getElementById(id);
+  if (el.innerHTML) { el.innerHTML = ""; return; }
+  el.innerHTML = `<iframe width="100%" height="200" style="border:0;border-radius:10px;margin-top:8px" src="https://www.youtube-nocookie.com/embed/${el.dataset.vid}" allowfullscreen></iframe>`;
+}
+
+/* ===== School lifting: week plan + auto-adjust ===== */
+const LIFT_EMPH = {1:"lower", 4:"upper", 5:"lower"};
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+function weekMonday(d){ const x = new Date(d); const dow = (x.getDay() + 6) % 7; x.setDate(x.getDate() - dow); return x; }
+function schoolSessionsForWeek(anyDate){
+  const mon = weekMonday(anyDate); const out = {};
+  for (let i = 0; i < 7; i++){
+    const dt = new Date(mon); dt.setDate(dt.getDate() + i); const di = iso(dt);
+    if (S.schoolPlan && S.schoolPlan[di]) out[di] = S.schoolPlan[di];
+    if (S.schoolLog && S.schoolLog[di]) out[di] = S.schoolLog[di];
+  }
+  return out;
+}
+function weekOverrides(anyDate){
+  const mon = weekMonday(anyDate);
+  const days = []; for (let i = 0; i < 7; i++){ const dt = new Date(mon); dt.setDate(dt.getDate() + i); days.push(dt); }
+  const SS = schoolSessionsForWeek(anyDate);
+  const ov = {}; const usedSwap = new Set();
+  days.forEach((dt, idx) => {
+    const di = iso(dt); const sess = sessionFor(dt); if (!sess) return;
+    const emph = LIFT_EMPH[dt.getDay()]; const myS = SS[di];
+    if (myS && emph && (myS === emph || myS === "both") && (sess.kind === "lift" || sess.kind === "power")){
+      ov[di] = { type:"covered", note:"Coach's program covers today's " + emph + " work — no double session. Fuel, mobility, done." };
+      return;
+    }
+    if (myS && emph && myS !== emph && myS !== "both"){
+      ov[di] = { type:"note", note:"School lifted " + myS + " today — this " + emph + " session still stands. Eat, hydrate, get after it." };
+      return;
+    }
+    if (myS && !emph){
+      ov[di] = { type:"note", note:"School lifting today (" + myS + ") plus this session — keep this one technical and fresh." + (((myS === "lower" || myS === "both") && (sess.kind === "speed" || sess.kind === "cond")) ? " Cut sprint volume in half." : "") };
+      return;
+    }
+    if (emph && idx > 0){
+      const ys = SS[iso(days[idx-1])];
+      if (ys && (ys === emph || ys === "both")){
+        let cand = null;
+        for (let j = idx + 1; j < 7; j++){
+          const cdt = days[j]; const cs = sessionFor(cdt); if (!cs) continue;
+          const cemph = LIFT_EMPH[cdt.getDay()];
+          if (cemph && cemph !== emph && !ov[iso(cdt)] && !usedSwap.has(iso(cdt)) && !SS[iso(cdt)]){ cand = cdt; break; }
+        }
+        if (cand){
+          ov[di] = { type:"swap", with: iso(cand), note:"School lifted " + emph + " yesterday, so this session swapped with " + cand.toLocaleDateString("en-US",{weekday:"long"}) + " — your " + emph + " work gets a recovery day." };
+          ov[iso(cand)] = { type:"swap", with: di, note:"Swapped with " + dt.toLocaleDateString("en-US",{weekday:"long"}) + " — school lifting shifted this week." };
+          usedSwap.add(iso(cand));
+        } else {
+          ov[di] = { type:"light", note:"School lifted " + emph + " yesterday — technique day: main lift at ~55% of the listed weight, perfect form, no plus set." };
+        }
+      }
+    }
+  });
+  return ov;
+}
+function plannedFor(date){
+  const base = sessionFor(date); if (!base) return base;
+  const di = iso(date);
+  const ov = weekOverrides(date)[di];
+  if (!ov) return base;
+  if (ov.type === "covered"){
+    const SS = schoolSessionsForWeek(date); const t = SS[di] || "lower";
+    return { title:"School Lifting — " + (t === "both" ? "Full Body" : cap(t) + " Body"), kind:"school", adjNote: ov.note, ex:[
+      { n:"Covered at school", d:"Coach's " + t + "-body session replaces today's app workout. When it's done, cross this day off with the school button below.", sets:0 },
+      { n:"Mobility Finish", d:"90/90 hip switches x10, couch stretch 1 min/side, ankle rocks x10/side. 10 min, easy.", sets:0, demo:"hip" }] };
+  }
+  if (ov.type === "swap"){
+    const s2 = sessionFor(new Date(ov.with + "T12:00:00"));
+    return Object.assign({}, s2, { adjNote: ov.note });
+  }
+  if (ov.type === "light"){
+    const clone = Object.assign({}, base, { adjNote: ov.note, ex: base.ex.map((e, i) => i === 0 ? Object.assign({}, e, { d: "TECHNIQUE DAY — use ~55% of the listed weight, no plus set.\n" + e.d }) : e) });
+    return clone;
+  }
+  return Object.assign({}, base, { adjNote: ov.note });
+}
+function schoolAsk(di){ const el = document.getElementById("school-" + di); if (el) el.style.display = "flex"; }
+function crossOffSchool(di, type){
+  const mk = ensureMark(di); mk.done = 1; mk.where = "school"; mk.schoolType = type;
+  S.schoolLog = S.schoolLog || {}; S.schoolLog[di] = type;
+  saveNoteVal(di); save(); rerender(); refreshGoal();
+}
+let SP = null;
+function schoolWeekCard(){
+  const mon = weekMonday(new Date());
+  if (!SP){ SP = {}; for (let i = 0; i < 5; i++){ const dt = new Date(mon); dt.setDate(dt.getDate() + i); const di = iso(dt); SP[di] = (S.schoolPlan && S.schoolPlan[di]) || ""; } }
+  const rows = [];
+  for (let i = 0; i < 5; i++){
+    const dt = new Date(mon); dt.setDate(dt.getDate() + i); const di = iso(dt);
+    const opts = [["","—"],["lower","Lower"],["upper","Upper"],["both","Both"]].map(([v,l]) =>
+      `<button class="rbtn ${SP[di]===v?"sel":""}" style="width:auto;padding:0 10px;height:38px;font-size:13px" onclick="setSP('${di}','${v}')">${l}</button>`).join("");
+    rows.push(`<div style="display:flex;align-items:center;gap:6px;margin:7px 0">
+      <div style="width:96px;font-weight:700;font-size:14px">${dt.toLocaleDateString("en-US",{weekday:"short", month:"numeric", day:"numeric"})}</div>${opts}</div>`);
+  }
+  return `<div class="card"><span class="tag">Start of week</span>
+    <h2 style="margin-top:8px">School Lifting This Week</h2>
+    <div class="note">How many days is he lifting at school this week, and which are upper / lower? Set it once — those days get marked ahead, and the rest of the week reshuffles itself around them so nothing doubles up.</div>
+    ${rows.join("")}
+    <button class="btn" style="width:100%;margin-top:10px" onclick="saveSchoolPlan()">Save This Week's Plan</button></div>`;
+}
+function setSP(di, v){ SP[di] = v; renderHome(); }
+function saveSchoolPlan(){
+  S.schoolPlan = S.schoolPlan || {};
+  Object.keys(SP).forEach(di => { if (SP[di]) S.schoolPlan[di] = SP[di]; else delete S.schoolPlan[di]; });
+  save(); SP = null; renderHome(); renderCal();
+}
+
+/* ===== Guided workout player + set logging ===== */
+let PL = null, plTimer = null;
+function parseW(e){ const m = (e.d || "").match(/@ (\d+) lb/); return m ? parseInt(m[1]) : 0; }
+function parseReps(e){
+  let m = (e.d || "").match(/sets x (\d+) reps/); if (m) return { reps: parseInt(m[1]), plus: /PLUS set/.test(e.d) };
+  m = (e.d || "").match(/x (\d+) reps/); if (m) return { reps: parseInt(m[1]), plus: false };
+  m = (e.d || "").match(/(\d+) sets x (\d+)/); if (m) return { reps: parseInt(m[2]), plus: false };
+  return { reps: 5, plus: false };
+}
+function startWorkout(di){
+  const sess = plannedFor(new Date(di + "T12:00:00")); if (!sess) return;
+  PL = { di, sess, i: 0, set: 0, logs: sess.ex.map(e => ({ n: e.n, sets: [] })) };
+  $("#player").classList.remove("hidden");
+  document.body.style.overflow = "hidden";
+  renderPlayer();
+}
+function closePlayer(){
+  $("#player").classList.add("hidden");
+  document.body.style.overflow = "";
+  if (plTimer) { clearInterval(plTimer); plTimer = null; }
+  PL = null;
+}
+function renderPlayer(){
+  const { sess, i, set } = PL;
+  const ex = sess.ex[i];
+  const t = parseReps(ex);
+  const w = parseW(ex);
+  const isLastEx = i === sess.ex.length - 1, isLastSet = set === ex.sets - 1;
+  const vid = vidFor(ex);
+  $("#player").innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <span class="tag">${sess.title}</span>
+      <button class="btn small ghost" onclick="closePlayer()">✕ Exit</button>
+    </div>
+    <div class="note" style="margin-top:10px">Exercise ${i+1} of ${sess.ex.length}</div>
+    <h2 style="font-size:30px;margin:4px 0 6px">${ex.n}</h2>
+    <div style="font-size:15.5px;color:var(--muted);white-space:pre-line">${ex.d}</div>
+    ${vid ? `<iframe width="100%" height="190" style="border:0;border-radius:12px;margin-top:12px" src="https://www.youtube-nocookie.com/embed/${vid}" allowfullscreen></iframe>` : ""}
+    ${ex.sets > 0 ? `
+    <div style="text-align:center;margin-top:22px">
+      <div class="note">SET</div>
+      <div class="bigset">${set+1} <span style="color:var(--muted);font-size:30px">/ ${ex.sets}</span></div>
+      ${w ? `<div style="font-size:24px;font-weight:800;margin-top:6px">${w} lb</div><div class="note">Plates per side: ${plateCalc(w)}</div>` : ""}
+      <div style="margin-top:16px">
+        <label class="lbl">Reps you got${t.plus && isLastSet ? " (PLUS set — max strong reps)" : ""}</label>
+        <input type="number" id="pl-reps" value="${t.reps}" style="max-width:110px;text-align:center;font-size:20px;font-weight:800;margin:0 auto">
+      </div>
+      <div id="pl-rest" style="font-size:20px;font-weight:800;color:var(--volt);min-height:26px;margin-top:12px"></div>
+      <button class="btn" style="width:100%;margin-top:10px;font-size:19px;padding:16px" onclick="playerSetDone()">${isLastEx && isLastSet ? "Finish Workout ✓" : "Set Done ✓"}</button>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn small ghost" style="flex:1" onclick="playerNav(-1)">← Prev</button>
+        <button class="btn small ghost" style="flex:1" onclick="playerSkip()">Skip exercise</button>
+        <button class="btn small ghost" style="flex:1" onclick="playerNav(1)">Next →</button>
+      </div>
+    </div>` : `<button class="btn" style="width:100%;margin-top:18px" onclick="playerSkip()">${isLastEx ? "Finish Workout ✓" : "Done — Next"}</button>`}`;
+}
+function playerRest(sec){
+  const el = $("#pl-rest"); if (!el) return;
+  let left = sec;
+  el.textContent = "Rest " + Math.floor(left/60) + ":" + String(left%60).padStart(2,"0");
+  if (plTimer) clearInterval(plTimer);
+  plTimer = setInterval(() => {
+    left--;
+    const e2 = $("#pl-rest"); if (!e2) { clearInterval(plTimer); return; }
+    if (left <= 0) { e2.textContent = "GO — next set"; clearInterval(plTimer); if (navigator.vibrate) navigator.vibrate(200); return; }
+    e2.textContent = "Rest " + Math.floor(left/60) + ":" + String(left%60).padStart(2,"0");
+  }, 1000);
+}
+function playerSetDone(){
+  const ex = PL.sess.ex[PL.i];
+  const reps = parseInt(($("#pl-reps") || {}).value) || parseReps(ex).reps;
+  PL.logs[PL.i].sets.push({ w: parseW(ex), reps });
+  if (PL.set < ex.sets - 1) { PL.set++; renderPlayer(); playerRest(PL.i === 0 ? 180 : 90); }
+  else if (PL.i < PL.sess.ex.length - 1) { PL.i++; PL.set = 0; renderPlayer(); }
+  else finishWorkout();
+}
+function playerNav(dir){
+  const ni = PL.i + dir;
+  if (ni < 0 || ni >= PL.sess.ex.length) return;
+  PL.i = ni; PL.set = 0; renderPlayer();
+}
+function playerSkip(){
+  if (PL.i < PL.sess.ex.length - 1) { PL.i++; PL.set = 0; renderPlayer(); }
+  else finishWorkout();
+}
+function e1rm(w, reps){ return w ? Math.round(w * (1 + reps / 30)) : 0; }
+function finishWorkout(){
+  S.logs = S.logs || {};
+  S.logs[PL.di] = PL.logs.filter(l => l.sets.length);
+  const mk = ensureMark(PL.di); mk.sets = mk.sets || {};
+  PL.sess.ex.forEach((ex, ei) => { if (ex.sets) mk.sets[ei] = Array.from({length: ex.sets}, () => true); });
+  save();
+  let bump = "";
+  PL.logs.forEach((l, li) => {
+    const ex = PL.sess.ex[li];
+    if (!ex || !l.sets.length) return;
+    const t = parseReps(ex);
+    const last = l.sets[l.sets.length - 1];
+    if (t.plus && last.reps >= t.reps + 2) {
+      const lift = l.n.includes("Squat") ? "squat" : l.n.includes("Bench") ? "bench" : null;
+      if (lift) {
+        const add = lift === "squat" ? 10 : 5;
+        bump = `<div class="card" style="border-color:var(--volt)"><h2>Plus Set Earned It</h2>
+          <div class="note">${last.reps} reps on the plus set — 2+ over target. Training max bump earned: ${cap(lift)} ${tm(lift)} → ${tm(lift) + add} lb.</div>
+          <button class="btn" style="margin-top:10px" onclick="applyBump('${lift}', ${add})">Apply +${add} lb</button></div>`;
+      }
+    }
+  });
+  const totalSets = PL.logs.reduce((a, l) => a + l.sets.length, 0);
+  const di = PL.di;
+  $("#player").innerHTML = `
+    <div style="text-align:center;margin-top:30px">
+      <div style="font-size:54px">🏆</div>
+      <h2 style="font-size:30px">Workout Complete</h2>
+      <div class="note">${totalSets} sets logged and saved to your history. All sets on today's card are checked off.</div>
+    </div>
+    ${bump}
+    <button class="btn" style="width:100%;margin-top:14px" onclick="closePlayer(); crossOff('${di}','home');">Cross It Off ✓</button>
+    <button class="btn ghost" style="width:100%;margin-top:8px" onclick="closePlayer(); renderHome();">Back to Today</button>`;
+  if (plTimer) { clearInterval(plTimer); plTimer = null; }
+}
+function applyBump(lift, add){
+  S.tm[lift] = tm(lift) + add; save();
+  closePlayer(); renderHome(); renderCal();
+}
+
+/* ===== History + benchmarks (Progress tab) ===== */
+function historyCard(){
+  const logs = S.logs || {};
+  const dates = Object.keys(logs).sort().reverse();
+  if (!dates.length) return `<div class="card"><h2>Top Set History</h2><div class="note">No logged workouts yet. Run a Guided Workout and your top sets, reps and estimated 1RMs will stack up here.</div></div>`;
+  const lifts = [["Squat","Back Squat"],["Bench","Bench Press"],["Clean","Hang Clean"]];
+  let html = `<div class="card"><h2>Top Set History</h2>`;
+  lifts.forEach(([label, match]) => {
+    const rows = [];
+    dates.forEach(dt => logs[dt].forEach(l => {
+      if (l.n.includes(match) && l.sets.length) {
+        const best = l.sets.reduce((a, s) => e1rm(s.w, s.reps) > e1rm(a.w, a.reps) ? s : a, l.sets[0]);
+        rows.push({ dt, w: best.w, reps: best.reps, e: e1rm(best.w, best.reps) });
+      }
+    }));
+    if (!rows.length) return;
+    const bestE = Math.max(...rows.map(r => r.e));
+    html += `<div style="margin-top:10px"><b>${label}</b> <span class="note">best est. 1RM: ${bestE} lb</span></div>` +
+      rows.slice(0, 4).map(r => `<div class="note" style="margin-top:2px">${r.dt.slice(5)} — ${r.w} lb × ${r.reps} (est. 1RM ${r.e})</div>`).join("");
+  });
+  return html + `</div>`;
+}
+function benchCard(){
+  const L = S.latest, F = S.frame;
+  const rows = [
+    ["Height", F.h || "~6'3\"", "6'3\"", "6'2\""],
+    ["Weight (lb)", F.wt || 250, 285, 262],
+    ["40 yd (sec, lower better)", L.forty ?? "—", 5.05, 5.28],
+    ["10 yd (sec, lower better)", L.ten ?? "—", 1.70, 1.80],
+    ["Shuttle (sec, lower better)", L.shuttle ?? "—", 4.65, 4.90],
+    ["L-Drill (sec, lower better)", L.ldrill ?? "—", 7.35, 7.70],
+    ["Broad (in)", L.broad ?? "—", 104, 97],
+    ["Vertical (in)", L.vert ?? "—", 29, 26],
+    ["Squat (lb)", L.squat ?? "—", 500, 450],
+    ["Bench (lb)", L.bench ?? "—", 340, 300],
+    ["Clean (lb)", L.clean ?? "—", 315, 275]];
+  return `<div class="card"><h2>The D1 Signee Scorecard</h2>
+    <div class="note">Your latest vs typical numbers posted by SIGNED defensive tackles at recruiting combines. Approximate ranges, not cutoffs — plenty of signees fall outside them. Log tests in the Numbers card above and this fills in. It's the gap map: exactly what to chase.</div>
+    <table class="bench" style="margin-top:10px"><tr><th>Metric</th><th>Jake</th><th>FBS DT</th><th>FCS DT</th></tr>
+    ${rows.map(r => `<tr><td>${r[0]}</td><td><b>${r[1]}</b></td><td>${r[2]}</td><td>${r[3]}</td></tr>`).join("")}
+    </table></div>`;
+}
+
+</script>
+<script>
 /* ============ HELPERS ============ */
 const $ = s => document.querySelector(s);
 const MONTHS = ["2026-12","2027-01","2027-02","2027-03","2027-04","2027-05","2027-06","2027-07","2027-08"];
@@ -303,7 +646,7 @@ function refreshGoal(){
 /* ============ VIEWS ============ */
 function dayCardHTML(dateIsoStr){
   const d = new Date(dateIsoStr + "T12:00:00");
-  const sess = sessionFor(d); if(!sess) return "";
+  const sess = plannedFor(d); if(!sess) return "";
   const mark = S.marks[dateIsoStr] || {};
   const dateLbl = d.toLocaleDateString("en-US",{weekday:"long", month:"long", day:"numeric"});
   let ex = sess.ex.map((e,i)=>{
@@ -312,25 +655,32 @@ function dayCardHTML(dateIsoStr){
     for(let sIdx=0;sIdx<e.sets;sIdx++)
       dots += `<button class="setdot ${doneSets[sIdx]?"done":""}" onclick="toggleSet('${dateIsoStr}',${i},${sIdx})">${sIdx+1}</button>`;
     return `<div class="exrow"><div class="nm">${e.n}</div><div class="dt">${e.d}</div>
-      ${e.demo?`<a class="demo" href="${DEMO[e.demo]}" target="_blank" rel="noopener">▶ Watch demo</a>`:""}
+      ${e.demo?`<a class="demo" href="${DEMO[e.demo]}" target="_blank" rel="noopener">▶ Watch demo</a>`:""}${vidFor(e)?` <a class="demo" href="#" onclick="toggleVid(event,'v-${dateIsoStr}-${i}')">▶ Watch video</a><div id="v-${dateIsoStr}-${i}" data-vid="${vidFor(e)}"></div>`:""}
       ${e.sets?`<div class="sets">${dots}</div>`:""}</div>`;
   }).join("");
   return `<div class="card">
-    <span class="tag ${mark.done?"hot":""}">${mark.done? "✓ Crossed off" + (mark.where==="school"?" — at school":"") : "Planned"}</span>
+    <span class="tag ${mark.done?"hot":""}">${mark.done? "✓ Crossed off" + (mark.where==="school"?" — at school (" + (mark.schoolType||"") + ")":"") : "Planned"}</span>
     <h2 style="margin-top:8px">${sess.title}</h2>
-    <div class="note">${dateLbl} · ${PHASE[key(d)]||""}</div>
+    <div class="note">${dateLbl} · ${PHASE[key(d)]||""}</div>${sess.adjNote?`<div class="note" style="color:var(--volt);margin-top:4px">⚠ ${sess.adjNote}</div>`:""}
     ${ex}
     <div class="timer" id="timer-${dateIsoStr}"><span>REST</span><span class="t" id="t-${dateIsoStr}">3:00</span>
       <span><button class="btn small ghost" onclick="startTimer('${dateIsoStr}',180)">3:00</button>
       <button class="btn small ghost" onclick="startTimer('${dateIsoStr}',60)">1:00</button>
       <button class="btn small ghost" onclick="stopTimer('${dateIsoStr}')">Stop</button></span></div>
+    <button class="btn" style="width:100%;margin:14px 0 4px" onclick="startWorkout('${dateIsoStr}')">▶ Start Guided Workout</button>
     <label class="lbl">What I did (notes)</label>
     <textarea id="note-${dateIsoStr}" placeholder="Weights felt easy, plus set reps, anything sore...">${mark.note||""}</textarea>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:12px">
       <button class="btn" onclick="crossOff('${dateIsoStr}','home')">${mark.done?"Update":"Cross it off"}</button>
-      <button class="btn orange" onclick="crossOff('${dateIsoStr}','school')">Did it at school</button>
+      <button class="btn orange" onclick="schoolAsk('${dateIsoStr}')">Did it at school</button>
       ${mark.done?`<button class="btn ghost" onclick="uncross('${dateIsoStr}')">Un-cross</button>`:""}
       <button class="btn ghost" onclick="saveNote('${dateIsoStr}')">Save note</button>
+    </div>
+    <div id="school-${dateIsoStr}" style="display:none;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">
+      <span class="note">School session was:</span>
+      <button class="btn small" onclick="crossOffSchool('${dateIsoStr}','lower')">Lower body</button>
+      <button class="btn small" onclick="crossOffSchool('${dateIsoStr}','upper')">Upper body</button>
+      <button class="btn small" onclick="crossOffSchool('${dateIsoStr}','both')">Both</button>
     </div></div>`;
 }
 function renderHome(){
@@ -348,6 +698,7 @@ function renderHome(){
       <div class="box"><div class="num">${st.total}</div><div class="cap">Days crossed off</div></div>
       <div class="box"><div class="num">${Math.round(overallProgress()*100)}%</div><div class="cap">To the goal</div></div>
     </div>
+    ${readyCardHTML(tIso)}${schoolWeekCard()}
     <div id="todayCard">${dayCardHTML(tIso)}</div>
     ${fuelCardHTML(tIso)}`;
 }
@@ -379,13 +730,13 @@ function renderCal(){
   const [y,m] = k.split("-").map(Number);
   const first = new Date(y, m-1, 1); const startDow = first.getDay();
   const ndays = new Date(y, m, 0).getDate();
-  const KIND = {lift:"Lift", speed:"Speed", craft:"Craft", power:"Power", cond:"Cond.", rest:"Rest", test:"TEST"};
-  const COLOR = {lift:"#ff7a1a", speed:"#c8f542", craft:"#e8b4ff", power:"#ffd23e", cond:"#5ec8ff", rest:"#6b6355", test:"#ff5252"};
+  const KIND = {lift:"Lift", speed:"Speed", craft:"Craft", power:"Power", cond:"Cond.", rest:"Rest", test:"TEST", school:"School"};
+  const COLOR = {lift:"#ff7a1a", speed:"#c8f542", craft:"#e8b4ff", power:"#ffd23e", cond:"#5ec8ff", rest:"#6b6355", test:"#ff5252", school:"#e8e8e8"};
   let cells = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].map(d=>`<div class="dow">${d}</div>`).join("");
   for(let i=0;i<startDow;i++) cells += `<div class="day empty"></div>`;
   const todayIso = iso(new Date());
   for(let dNum=1; dNum<=ndays; dNum++){
-    const dt = new Date(y, m-1, dNum); const di = iso(dt); const sess = sessionFor(dt);
+    const dt = new Date(y, m-1, dNum); const di = iso(dt); const sess = plannedFor(dt);
     const done = S.marks[di] && S.marks[di].done;
     cells += `<button class="day ${done?"done":""} ${di===todayIso?"today":""}" onclick="openDay('${di}')">
       <span class="n">${dNum}</span>${sess?`<span class="dot" style="background:${COLOR[sess.kind]}"></span><span class="k">${KIND[sess.kind]}</span>`:""}</button>`;
@@ -427,7 +778,7 @@ function renderProgress(){
         <input type="number" id="tm-bench" value="${tm("bench")}" title="Bench TM">
         <input type="number" id="tm-clean" value="${tm("clean")}" title="Clean TM"></div>
       <div class="note" style="margin-top:5px">Squat / Bench / Clean training max (lb). Workout weights rebuild from these instantly.</div>
-      <div style="margin-top:10px"><button class="btn small orange" onclick="saveTMs()">Save maxes</button></div></div>`;
+      <div style="margin-top:10px"><button class="btn small orange" onclick="saveTMs()">Save maxes</button></div></div>${historyCard()}${benchCard()}`;
 }
 function renderMeals(){
   const custom = S.avoids || [];
@@ -512,6 +863,12 @@ function renderPlaybook(){
       <p><b>Speed & skill:</b> sprint mechanics, change of direction, hand fighting — motor learning consolidates overnight. He wakes up better at what he practiced yesterday, or he doesn't.</p>
       <p><b>Injury risk:</b> in a published study of adolescent athletes, sleeping under 8 hours a night came with roughly <b>1.7x the injury rate</b>. Sleep is injury prevention.</p>
       <p><b>The routine:</b> same wake time every day, screens off 30 min before bed, cool dark room, bed by ~9:30-10 for a school-day wake-up. The Daily Fuel check on the Today tab tracks it like a lift — because it is one.</p></div></div>
+    <div class="card"><h2>Plate Calculator</h2>
+      <p class="rules">45 lb bar. Type the weight you need — it shows the plates for ONE side.</p>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <input type="number" id="plate-in" placeholder="e.g. 325" oninput="plateOut()" style="max-width:130px">
+        <div id="plate-out" style="font-weight:700"></div>
+      </div></div>
     <div class="card"><h2>Backup / Share Progress</h2>
       <p class="rules">Progress is saved on this device. Export a backup file, or send it to Dad so he can load it and see everything.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
