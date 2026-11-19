@@ -166,22 +166,36 @@ const PHASE = { "2026-12":"Post-season recovery, then Base. Testing Dec 28-30.",
   "2027-07":"Summer — power + conditioning ramp.",
   "2027-08":"Camp prep — peak. August targets on the line." };
 const DEMO = {
-  squat:"https://www.youtube.com/results?search_query=how+to+back+squat+proper+form+athlete",
-  bench:"https://www.youtube.com/results?search_query=how+to+bench+press+proper+form",
-  clean:"https://www.youtube.com/results?search_query=how+to+hang+clean+technique+football",
-  rdl:"https://www.youtube.com/results?search_query=how+to+romanian+deadlift+form",
-  row:"https://www.youtube.com/results?search_query=how+to+barbell+row+form",
-  split:"https://www.youtube.com/results?search_query=bulgarian+split+squat+form+athletes",
-  boxjump:"https://www.youtube.com/results?search_query=box+jump+technique+land+soft",
-  medball:"https://www.youtube.com/results?search_query=medicine+ball+throw+drills+football+power",
-  shuttle:"https://www.youtube.com/results?search_query=5-10-5+pro+agility+shuttle+technique",
-  latbound:"https://www.youtube.com/results?search_query=lateral+bounds+skater+jump+technique+athletes",
-  cut:"https://www.youtube.com/results?search_query=90+degree+cut+drill+change+of+direction+football",
-  wave:"https://www.youtube.com/results?search_query=defensive+line+wave+drill+lateral+movement",
-  getoff:"https://www.youtube.com/results?search_query=defensive+line+get+off+drills+nose+guard",
-  hands:"https://www.youtube.com/results?search_query=defensive+line+hand+fighting+drills",
-  carry:"https://www.youtube.com/results?search_query=farmer+carry+form+grip",
-  hip:"https://www.youtube.com/results?search_query=90+90+hip+mobility+drill" };
+  squat:"https://www.youtube.com/watch?v=gcNh17Ckjgg",
+  bench:"https://www.youtube.com/watch?v=4Y2ZdHCOXok",
+  clean:"https://www.youtube.com/watch?v=uFB9cDXAXU0",
+  rdl:"https://www.youtube.com/watch?v=ysMo_VFN-dY",
+  row:"https://www.youtube.com/watch?v=A1tmBJKKfVs",
+  split:"https://www.youtube.com/watch?v=hiLF_pF3EJM",
+  boxjump:"https://www.youtube.com/watch?v=YLPQsdRDmB0",
+  medball:"https://www.youtube.com/watch?v=Jlwpf-0zsDQ",
+  shuttle:"https://www.youtube.com/watch?v=qYDXaXRodWc",
+  latbound:"https://www.youtube.com/watch?v=Hc9_FQgIeeg",
+  cut:"https://www.youtube.com/watch?v=hv_r8ruozTM",
+  wave:"https://www.youtube.com/watch?v=lqzuH_5QpM4",
+  getoff:"https://www.youtube.com/watch?v=eDSkbjbtXyg",
+  hands:"https://www.youtube.com/watch?v=KJHKKM4B1vo",
+  carry:"https://www.youtube.com/watch?v=Kh0871u60z0",
+  hip:"https://www.youtube.com/watch?v=E5BInrORfF8",
+  lunge:"https://www.youtube.com/watch?v=mAgbXQdd4LM",
+  buildup:"https://www.youtube.com/watch?v=L68v1RpIBEg",
+  shuffle:"https://www.youtube.com/watch?v=315rgJ5uYsU",
+  forty:"https://www.youtube.com/watch?v=rIlFj4TKvpI",
+  shed:"https://www.youtube.com/watch?v=yc6VMLZlCDw",
+  incline:"https://www.youtube.com/watch?v=PZecKOpWOrk",
+  pulldown:"https://www.youtube.com/watch?v=SALxEARiMkw",
+  facepull:"https://www.youtube.com/watch?v=0Po47vvj9g4",
+  broadjump:"https://www.youtube.com/watch?v=uhz-ia-2UcM",
+  core:"https://www.youtube.com/watch?v=6KNrG_U-RTw",
+  repeats:"https://www.youtube.com/watch?v=rCnm_zMvbUA",
+  sled:"https://www.youtube.com/watch?v=8UqhblFOMe8",
+  bear:"https://www.youtube.com/watch?v=t8XLor7unqU",
+  nordic:"https://www.youtube.com/watch?v=F-AaE8mw_pY" };
 const METRICS = [
   {k:"squat", n:"Squat", u:"lb", base:405, est:"430-445", goal:475, stretch:500, up:1, w:14},
   {k:"bench", n:"Bench", u:"lb", base:235, est:"250-260", goal:280, stretch:295, up:1, w:9},
@@ -233,43 +247,43 @@ function sessionFor(date){
       {n:"Back Squat", d:`${WARM}\nRamp: 135x5, 185x3, 225x2 → Work: ${sN} sets x ${sr} reps @ ${sqW} lb. Rest 2-3 min. ${plusTxt}`, sets:sN, demo:"squat"},
       {n:"Romanian Deadlift", d:`3 sets x 8 reps @ ${r5(sqW*0.55)} lb`, sets:3, demo:"rdl"},
       {n:"Barbell / Chest-Supported Row", d:`3 sets x 10 reps @ ${r5(sqW*0.42)} lb`, sets:3, demo:"row"},
-      {n:"Walking Lunges", d:"2 sets x 8 each leg, bodyweight or light DBs", sets:2},
+      {n:"Walking Lunges", d:"2 sets x 8 each leg, bodyweight or light DBs", sets:2, demo:"lunge"},
       {n:"Neck + Grip", d:"Neck work 2x15 light. Farmer hold 2x30 sec, heavy.", sets:2, demo:"carry"}]},
     2:{title:"Speed & Agility", kind:"speed", ex:[
       {n:"Warm-up", d:"Jog, high knees, A-skips, leg swings, karaoke (cross-over run) 2x15 yd each way, lateral shuffles 2x10 yd — 10 min.", sets:0},
       {n:"Stance-and-Start (10-yd)", d:"From your 3-point DL stance: 6 reps x 10 yd, walk back, full rest.", sets:6, demo:"getoff"},
-      {n:"20-yd Buildups", d:"4 reps, smooth to fast.", sets:4},
+      {n:"20-yd Buildups", d:"4 reps, smooth to fast.", sets:4, demo:"buildup"},
       {n:"5-10-5 Shuttle Practice", d:"4 reps (2 each direction). Low hips, plant foot outside.", sets:4, demo:"shuttle"},
       {n:"Lateral Bounds", d:"3 sets x 4 each side. Jump sideways off one leg, land on the other and STICK it — no wobble, no extra hop. Power sideways is what closes on a QB and beats a reach block.", sets:3, demo:"latbound"},
       {n:"90° Cut Sprints", d:"4 reps: sprint 10 yd, plant hard outside foot, cut 90° and burst 5 yd (2 left, 2 right). Hips low into the plant, head up out of it.", sets:4, demo:"cut"},
-      {n:"Shuffle to Sprint", d:"4 reps: 5 yd lateral shuffle → 10 yd sprint.", sets:4},
-      {n:"40-yd Relaxed-Fast", d:"2 reps. Quality only — if form falls apart, the day is over.", sets:2}]},
+      {n:"Shuffle to Sprint", d:"4 reps: 5 yd lateral shuffle → 10 yd sprint.", sets:4, demo:"shuffle"},
+      {n:"40-yd Relaxed-Fast", d:"2 reps. Quality only — if form falls apart, the day is over.", sets:2, demo:"forty"}]},
     3:{title:"DL Craft & Hands", kind:"craft", ex:[
       {n:"Stance-and-Start", d:"On a ball/snap count: 10 reps. First step 6 inches, low pad level.", sets:10, demo:"getoff"},
       {n:"Wave Drill — Lateral Steps", d:"4 x 15 sec: in your stance, quick lateral steps left-right-left on command (or alternate every 2 steps), staying LOW — no standing up, no crossing feet. This is pass-rush counter and down-the-line pursuit movement.", sets:4, demo:"wave"},
       {n:"Fit-and-Lockout Holds", d:"Vs a pad/partner: 5 x 5 sec at FULL arm extension. Use the 6'8\" wingspan.", sets:5, demo:"hands"},
       {n:"Stab-and-Rip", d:"6 each side: one-arm stab, rip through.", sets:6, demo:"hands"},
       {n:"Hand Fighting Mirror Rounds", d:"4 x 20 sec: club, chop, swipe — hands at arm's length.", sets:4, demo:"hands"},
-      {n:"Shed-and-Pursue", d:"Engage, shed, sprint 10 yd at an angle: 6 reps.", sets:6},
+      {n:"Shed-and-Pursue", d:"Engage, shed, sprint 10 yd at an angle: 6 reps.", sets:6, demo:"shed"},
       {n:"Mobility Finish", d:"90/90 hip switches x10, couch stretch 1 min/side, ankle rocks x10/side, thoracic openers x8.", sets:0, demo:"hip"}]},
     4:{title:"Strength B — Bench Day", kind:"lift", ex:[
       {n:"Bench Press", d:`${WARM}\nRamp: 95x5, 135x3, 165x2 → Work: ${bN} sets x ${sr} reps @ ${beW} lb. Spotter on work sets. ${plusTxt}`, sets:bN, demo:"bench"},
-      {n:"Incline DB Press", d:"3 sets x 10, heaviest DBs you control (start 40-50s).", sets:3},
+      {n:"Incline DB Press", d:"3 sets x 10, heaviest DBs you control (start 40-50s).", sets:3, demo:"incline"},
       {n:"Bulgarian Split Squat", d:"3 sets x 6 each leg. Add load when easy.", sets:3, demo:"split"},
-      {n:"Lat Pulldown / Pull-ups", d:"3 sets x 8-10.", sets:3},
-      {n:"Nordic Curl Eccentrics", d:"3 sets x 3-5 SLOW lowers (5 sec down), partner holding ankles or heels hooked. Hamstring armor — the #1 injury-proofing drill for sprinting athletes. Assist with hands on the way back up.", sets:3},
-      {n:"Face Pulls + Triceps", d:"Face pulls 2x15. Pushdowns 2x12.", sets:2}]},
+      {n:"Lat Pulldown / Pull-ups", d:"3 sets x 8-10.", sets:3, demo:"pulldown"},
+      {n:"Nordic Curl Eccentrics", d:"3 sets x 3-5 SLOW lowers (5 sec down), partner holding ankles or heels hooked. Hamstring armor — the #1 injury-proofing drill for sprinting athletes. Assist with hands on the way back up.", sets:3, demo:"nordic"},
+      {n:"Face Pulls + Triceps", d:"Face pulls 2x15. Pushdowns 2x12.", sets:2, demo:"facepull"}]},
     5:{title:"Power Day", kind:"power", ex:[
       {n:"Hang Clean", d:`Warm-up: bike 3 min, A-skips, pogo hops x10, med-ball pass x5.\nRamp: 95x3, 135x2 → Work: ${cN} sets x ${cr} reps @ ${clW} lb. Fast and clean — ugly catch, drop 10 lb.`, sets:cN, demo:"clean"},
       {n:"Box Jumps", d:"4 sets x 3. Low box, step down, land soft and quiet.", sets:4, demo:"boxjump"},
       {n:"Med-Ball Throws", d:"Chest pass 4x4. Rotational throw 3x3 each side (10-14 lb ball).", sets:4, demo:"medball"},
-      {n:"Broad Jump", d:"4 sets x 2. Stick the landing.", sets:4},
-      {n:"Core", d:"Dead bugs 2x10. Side plank 2x30 sec each side.", sets:2}]},
+      {n:"Broad Jump", d:"4 sets x 2. Stick the landing.", sets:4, demo:"broadjump"},
+      {n:"Core", d:"Dead bugs 2x10. Side plank 2x30 sec each side.", sets:2, demo:"core"}]},
     6:{title:"Conditioning", kind:"cond", ex:[
-      {n:"Repeat Sprints", d:"8 x 20 yd, walk back as rest (~30 sec). Full recovery before each rep.", sets:8},
+      {n:"Repeat Sprints", d:"8 x 20 yd, walk back as rest (~30 sec). Full recovery before each rep.", sets:8, demo:"repeats"},
       {n:"Farmer Carries", d:"4 x 40 yd. Heaviest DBs you can grip without leaning (start 70-90 lb each hand).", sets:4, demo:"carry"},
-      {n:"Sled Push / Hill Sprint", d:"4 x 15 yd (if available).", sets:4},
-      {n:"Bear Crawl", d:"3 x 15 yd finisher.", sets:3}]},
+      {n:"Sled Push / Hill Sprint", d:"4 x 15 yd (if available).", sets:4, demo:"sled"},
+      {n:"Bear Crawl", d:"3 x 15 yd finisher.", sets:3, demo:"bear"}]},
     0:{title:"Rest Day", kind:"rest", ex:[
       {n:"Weigh In + Recover", d:"Morning: weigh yourself and log it in Progress (growth tracking — the number should creep UP slowly). Mobility flow 10 min (hips, ankles, T-spine), walk, eat big, sleep 9 hours. Growth happens today.", sets:0, demo:"hip"}]}
   };
@@ -323,7 +337,7 @@ function plateCalc(total){
 function plateOut(){ const v = parseFloat($("#plate-in").value); $("#plate-out").textContent = isNaN(v) ? "" : "Per side: " + plateCalc(v); }
 
 /* ===== Embedded videos ===== */
-const VID = { squat:"gcNh17Ckjgg", bench:"4Y2ZdHCOXok", clean:"uFB9cDXAXU0" };
+const VID = { squat:"gcNh17Ckjgg", bench:"4Y2ZdHCOXok", clean:"uFB9cDXAXU0", rdl:"ysMo_VFN-dY", row:"A1tmBJKKfVs", split:"hiLF_pF3EJM", boxjump:"YLPQsdRDmB0", medball:"Jlwpf-0zsDQ", shuttle:"qYDXaXRodWc", latbound:"Hc9_FQgIeeg", cut:"hv_r8ruozTM", wave:"lqzuH_5QpM4", getoff:"eDSkbjbtXyg", hands:"KJHKKM4B1vo", carry:"Kh0871u60z0", hip:"E5BInrORfF8", lunge:"mAgbXQdd4LM", buildup:"L68v1RpIBEg", shuffle:"315rgJ5uYsU", forty:"rIlFj4TKvpI", shed:"yc6VMLZlCDw", incline:"PZecKOpWOrk", pulldown:"SALxEARiMkw", facepull:"0Po47vvj9g4", broadjump:"uhz-ia-2UcM", core:"6KNrG_U-RTw", repeats:"rCnm_zMvbUA", sled:"8UqhblFOMe8", bear:"t8XLor7unqU", nordic:"F-AaE8mw_pY" };
 const VID_NAME = { "Nordic Curl Eccentrics":"F-AaE8mw_pY" };
 function vidFor(e){ return VID[e.demo] || VID_NAME[e.n] || null; }
 function toggleVid(e, id){
@@ -861,7 +875,7 @@ function renderPlaybook(){
   const demos = [["Back Squat","squat"],["Bench Press","bench"],["Hang Clean","clean"],["Romanian Deadlift","rdl"],
     ["Barbell Row","row"],["Bulgarian Split Squat","split"],["Box Jump","boxjump"],["Med-Ball Throws","medball"],
     ["5-10-5 Shuttle","shuttle"],["DL Get-Off / Stance & Start","getoff"],["DL Hand Fighting","hands"],
-    ["Farmer Carry","carry"],["90/90 Hip Mobility","hip"],["Lateral Bounds","latbound"],["90° Cut Sprints","cut"],["Wave Drill (Lateral)","wave"]]
+    ["Farmer Carry","carry"],["90/90 Hip Mobility","hip"],["Lateral Bounds","latbound"],["90° Cut Sprints","cut"],["Wave Drill (Lateral)","wave"],["Walking Lunges","lunge"],["20-yd Buildups","buildup"],["Shuffle to Sprint","shuffle"],["40-Yard Dash Start","forty"],["Shed & Pursue","shed"],["Incline DB Press","incline"],["Lat Pulldown","pulldown"],["Face Pulls","facepull"],["Broad Jump","broadjump"],["Dead Bug Core","core"],["Repeat Sprints","repeats"],["Sled Push","sled"],["Bear Crawl","bear"],["Nordic Curls","nordic"]]
     .map(([n,k])=>`<li><a href="${DEMO[k]}" target="_blank" rel="noopener">${n}<span>▶ Watch</span></a></li>`).join("");
   $("#view-playbook").innerHTML = `
     <div class="card"><h2>How The Weights Climb</h2><div class="rules">
