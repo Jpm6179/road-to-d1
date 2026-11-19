@@ -127,6 +127,7 @@ ul.demos a span{color:var(--orange)}
   <main id="view-home"></main>
   <main id="view-cal" class="hidden"></main>
   <main id="view-progress" class="hidden"></main>
+  <main id="view-meals" class="hidden"></main>
   <main id="view-playbook" class="hidden"></main>
 </div>
 
@@ -134,6 +135,7 @@ ul.demos a span{color:var(--orange)}
   <button data-v="home" class="on">Today</button>
   <button data-v="cal">Calendar</button>
   <button data-v="progress">Progress</button>
+  <button data-v="meals">Meals</button>
   <button data-v="playbook">Playbook</button>
 </nav>
 <script>
@@ -427,6 +429,55 @@ function renderProgress(){
       <div class="note" style="margin-top:5px">Squat / Bench / Clean training max (lb). Workout weights rebuild from these instantly.</div>
       <div style="margin-top:10px"><button class="btn small orange" onclick="saveTMs()">Save maxes</button></div></div>`;
 }
+function renderMeals(){
+  const custom = S.avoids || [];
+  const customRows = custom.map((a,i)=>`<div class="exrow" style="display:flex;justify-content:space-between;align-items:center">
+    <div class="dt" style="margin:0;font-size:15px;color:var(--text)">${a}</div>
+    <button class="btn small ghost" onclick="removeAvoid(${i})">Remove</button></div>`).join("");
+  $("#view-meals").innerHTML = `
+    <div class="card"><h2>His Daily Targets</h2><div class="rules">
+      <p><b>Protein:</b> 160-185 g every day — training day or not. This is the building material.</p>
+      <p><b>Calories:</b> ~3,400-3,800 on training days, a bit less on rest days (same protein, fewer carbs). At ~250 lb and still growing, the scale should creep UP slowly. He is never cutting.</p>
+      <p><b>Water:</b> about a gallon a day. More on conditioning days and in summer heat.</p>
+      <p><b>Creatine monohydrate:</b> 5 g daily with food. <b>Multivitamin:</b> with breakfast.</p></div></div>
+    <div class="card"><h2>Training Day — The Template</h2><div class="rules">
+      <p><b>Breakfast (~35-40 g protein):</b> 4 eggs, oatmeal, banana, glass of milk. Multivitamin here.</p>
+      <p><b>School lunch + shake (~40 g):</b> eat the full lunch, add a whey shake or chocolate milk. School food alone won't hit the number.</p>
+      <p><b>Pre-training, 60-90 min before (~20 g):</b> PB sandwich + banana. Fuel in the tank — never train on empty.</p>
+      <p><b>Dinner, post-training (~55 g):</b> the big plate: meat (beef, chicken, pork), rice or potatoes, vegetables, milk. Seconds are fine — this meal does the heavy lifting.</p>
+      <p><b>Before bed (~25 g):</b> Greek yogurt or cottage cheese + berries. Slow protein working overnight while growth hormone does its shift.</p></div></div>
+    <div class="card"><h2>Rest Day</h2><div class="rules">
+      <p>Same protein, same five meals in shape — just trim the pre-training snack and take a smaller second helping at dinner. Rest days are when the growth actually happens; under-eating them is the most common way athletes stall.</p></div></div>
+    <div class="card"><h2>Testing / Camp Day</h2><div class="rules">
+      <p>Nothing new on testing day — no new foods, no new supplements. Big normal breakfast 2-3 hours before, banana + sports drink during, protein + carbs within an hour after. Hydrate the day BEFORE, not just the morning of.</p></div></div>
+    <div class="card"><h2>Needs</h2><div class="rules">
+      <p><b>·</b> A real breakfast every day — no training or school on an empty tank.</p>
+      <p><b>·</b> Protein at every meal, not all loaded at dinner.</p>
+      <p><b>·</b> Carbs around training (before for fuel, after for refill) — carbs are how a lineman keeps his weight and his legs.</p>
+      <p><b>·</b> A bedtime protein feeding — overnight is growth time.</p>
+      <p><b>·</b> Sunday weigh-in context: weight trends steer calories. Flat for 3+ weeks while training hard = add ~300 kcal/day.</p></div></div>
+    <div class="card"><h2>Avoids</h2><div class="rules">
+      <p><b>· Energy drinks and high-caffeine pre-workouts.</b> Not for a 14-year-old athlete — sleep is worth more than the buzz, and the buzz wrecks the sleep.</p>
+      <p><b>· SARMs, prohormones, test boosters, fat burners.</b> Banned in his sport at every level, and they end recruiting conversations. Full stop.</p>
+      <p><b>· Mass-gainer shakes.</b> Expensive sugar. Real food + whey does the same job better.</p>
+      <p><b>· Weight cutting, ever.</b> He is growing into a frame, not making a weight class.</p>
+      <p><b>· Training fasted or skipping breakfast</b> — see Needs.</p>
+      <p><b>· Big greasy meals right before training or testing</b> — slow digestion, heavy legs. Save it for after.</p>
+      <p><b>· Anything a teammate hands him that isn't on this list.</b> If it's not creatine, a multivitamin, or whey, it doesn't go in. When in doubt, ask Dad.</p></div>
+      <label class="lbl">His personal avoids (allergies, foods he won't eat)</label>
+      ${customRows || '<div class="note">None added yet.</div>'}
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input type="text" id="avoid-new" placeholder="e.g. Peanuts — allergy">
+        <button class="btn small" onclick="addAvoid()">Add</button>
+      </div></div>
+    <div class="card"><h2>Staples To Keep In The House</h2><div class="rules">
+      <p>Eggs · milk · Greek yogurt · cottage cheese · ground beef · chicken · oats · rice · potatoes · peanut butter · bananas · berries · whey protein · creatine monohydrate · multivitamin · chocolate milk (the post-training classic).</p></div></div>`;
+}
+function addAvoid(){
+  const el = $("#avoid-new"); const v = (el.value||"").trim(); if(!v) return;
+  S.avoids = S.avoids || []; S.avoids.push(v); save(); renderMeals();
+}
+function removeAvoid(i){ S.avoids.splice(i,1); save(); renderMeals(); }
 function renderPlaybook(){
   const demos = [["Back Squat","squat"],["Bench Press","bench"],["Hang Clean","clean"],["Romanian Deadlift","rdl"],
     ["Barbell Row","row"],["Bulgarian Split Squat","split"],["Box Jump","boxjump"],["Med-Ball Throws","medball"],
@@ -511,11 +562,12 @@ document.querySelectorAll("nav.tabs button").forEach(b=>{
   b.addEventListener("click", ()=>{
     document.querySelectorAll("nav.tabs button").forEach(x=>x.classList.remove("on"));
     b.classList.add("on");
-    ["home","cal","progress","playbook"].forEach(v=>$("#view-"+v).classList.add("hidden"));
+    ["home","cal","progress","meals","playbook"].forEach(v=>$("#view-"+v).classList.add("hidden"));
     $("#view-"+b.dataset.v).classList.remove("hidden");
     if(b.dataset.v==="home") renderHome();
     if(b.dataset.v==="cal") renderCal();
     if(b.dataset.v==="progress") renderProgress();
+    if(b.dataset.v==="meals") renderMeals();
     if(b.dataset.v==="playbook") renderPlaybook();
     window.scrollTo({top:0});
   });
