@@ -147,6 +147,9 @@ table.bench td:first-child,table.bench th:first-child{text-align:left}
   <button data-v="meals">Meals</button>
   <button data-v="playbook">Playbook</button>
 </nav>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
 <script>
 /* ============ PROGRAM DATA ============ */
 const TM0 = { squat: 437, bench: 255, clean: 255 }; // estimated training maxes until Dec testing
@@ -214,7 +217,7 @@ S.marks = S.marks || {};       // iso -> {done:1, where:"home"|"school", note:""
 S.latest = S.latest || {};     // metric key -> latest value
 S.tm = S.tm || {};             // overrides for training maxes
 S.frame = S.frame || {};       // height, wingspan, weight
-function save(){ localStorage.setItem(LS, JSON.stringify(S)); }
+function save(){ S._u = Date.now(); localStorage.setItem(LS, JSON.stringify(S)); cloudPush(); }
 function tm(lift){ return S.tm[lift] || TM0[lift]; }
 const r5 = x => Math.round(x/5)*5;
 const iso = d => d.toISOString().slice(0,10);
@@ -222,8 +225,20 @@ const key = d => iso(d).slice(0,7);
 function wkOf(day){ return day<=7?1 : day<=14?2 : day<=21?3 : 4; }
 function adjPct(base, wk){ return wk===4 ? [0.60,true] : [base+(wk-1)*0.025, false]; }
 
+/* Flexible program start: the calendar (months, waves, testing days) was built around a
+   Mon Nov 30, 2026 start (ORIGIN). S.progStart slides it — every date is translated to
+   its program date before any lookup, so the whole program moves as one piece. */
+const ORIGIN = "2026-11-30";
+function progStart(){ const d = new Date((S.progStart || ORIGIN) + "T12:00:00"); return iso(weekMonday(d)); }
+function progShift(){ return Math.round((new Date(ORIGIN + "T12:00:00") - new Date(progStart() + "T12:00:00")) / 86400000); }
+function vdate(date){ const v = new Date(date); v.setDate(v.getDate() + progShift()); return v; }
+function vkey(date){ return key(vdate(date)); }
+function fmtD(isoStr){ return new Date(isoStr + "T12:00:00").toLocaleDateString("en-US", {weekday:"short", month:"short", day:"numeric", year:"numeric"}); }
+
 /* ============ SESSION GENERATION ============ */
 function sessionFor(date){
+  const realIso = iso(date);
+  date = vdate(date);
   const k = key(date), day = date.getDate(), wd = date.getDay(); // 0 Sun
   const mon = date.getMonth();
   if(k==="2026-12" && day<=13) return {title:"Recovery Day", kind:"rest", ex:[
@@ -233,10 +248,14 @@ function sessionFor(date){
       {n:"Jump & sprint tests", d:"Vertical x3, broad jump x3, 10-yd x3, shuttle x2 each way. Coach/adult present — no true 1RM attempts.", sets:0},
       {n:"Strength check", d:"Squat, bench, clean: clean sets of 3-5, add weight while form stays perfect. Last clean set estimates your max.", sets:0},
       {n:"Log it", d:"Enter every number in the Progress tab — the whole program recalculates from real maxes.", sets:0}]};
+  if(k < "2026-12") return {title:"Season Mode — Program Starts " + fmtD(progStart()), kind:"rest", ex:[
+    {n:"In-Season Maintenance", d:"Season is still on — team lifting only, no extra offseason work. Mobility flow 10 min (hips, ankles, T-spine), hit the fuel check, sleep 9 hours. The offseason program starts " + fmtD(progStart()) + " — if the season runs longer, move the start in Playbook \u2192 Program Start and everything slides with it.", sets:0, demo:"hip"}]};
+  if(k > "2027-08") return {title:"Program Complete — Camp Mode", kind:"rest", ex:[
+    {n:"Keep The Engine On", d:"Offseason program complete. Stay on the fuel check, mobility daily, and team work — and keep logging new numbers in Progress.", sets:0, demo:"hip"}]};
   const base = BASE[k]; if(base===undefined) return null;
   const wk = wkOf(day), [pct, deload] = adjPct(base, wk);
   const [ss, sr] = SETS[k], [cs, cr] = CLSETS[k];
-  const rf = (iso(date)===iso(new Date()) && S.readiness && S.readiness[iso(date)]) ? readyFactorOf(S.readiness[iso(date)]) : 1;
+  const rf = (realIso===iso(new Date()) && S.readiness && S.readiness[realIso]) ? readyFactorOf(S.readiness[realIso]) : 1;
   const sqW = r5(tm("squat")*pct*rf), beW = r5(tm("bench")*pct*rf), clW = r5(tm("clean")*pct*rf);
   const sN = deload? Math.max(3, ss-1) : ss, bN = sN, cN = deload? Math.max(3, cs-1) : cs;
   const plusTxt = deload? "Deload week — light and fast, leave fresh." :
@@ -648,9 +667,9 @@ function benchCard(){
 <script>
 /* ============ HELPERS ============ */
 const $ = s => document.querySelector(s);
-const MONTHS = ["2026-12","2027-01","2027-02","2027-03","2027-04","2027-05","2027-06","2027-07","2027-08"];
-const MNAME = {"2026-12":"December 2026","2027-01":"January 2027","2027-02":"February 2027","2027-03":"March 2027",
-  "2027-04":"April 2027","2027-05":"May 2027","2027-06":"June 2027","2027-07":"July 2027","2027-08":"August 2027"};
+let MONTHS = calMonths();
+function calMonths(){ const out = []; const s = new Date(progStart() + "T12:00:00"); s.setDate(1); for(let i = 0; i < 11; i++){ const d = new Date(s); d.setMonth(d.getMonth() + i); out.push(iso(d).slice(0,7)); } return out; }
+function mname(k){ const p = k.split("-"); return new Date(+p[0], +p[1] - 1, 1).toLocaleDateString("en-US", {month:"long", year:"numeric"}); }
 let calIdx = Math.max(0, MONTHS.indexOf(key(new Date())));
 let openDate = iso(new Date());
 let timerInt = null, timerLeft = 0;
@@ -703,7 +722,7 @@ function dayCardHTML(dateIsoStr){
   return `<div class="card">
     <span class="tag ${mark.done?"hot":""}">${mark.done? "✓ Crossed off" + (mark.where==="school"?" — at school (" + (mark.schoolType||"") + ")":"") : (plannedSchoolDay(dateIsoStr) ? "Team lifting planned" : "Planned")}</span>
     <h2 style="margin-top:8px">${sess.title}</h2>
-    <div class="note">${dateLbl} · ${PHASE[key(d)]||""}</div>${sess.adjNote?`<div class="note" style="color:var(--volt);margin-top:4px">⚠ ${sess.adjNote}</div>`:""}
+    <div class="note">${dateLbl} · ${PHASE[vkey(d)]||""}</div>${sess.adjNote?`<div class="note" style="color:var(--volt);margin-top:4px">⚠ ${sess.adjNote}</div>`:""}
     ${ex}
     <div class="timer" id="timer-${dateIsoStr}"><span>REST</span><span class="t" id="t-${dateIsoStr}">3:00</span>
       <span><button class="btn small ghost" onclick="startTimer('${dateIsoStr}',180)">3:00</button>
@@ -733,7 +752,7 @@ function renderHome(){
     <div class="card today-hero">
       <div class="date">${t.toLocaleDateString("en-US",{weekday:"long", month:"long", day:"numeric", year:"numeric"})}</div>
       <h2>${sess? sess.title : "Offseason"}</h2>
-      <p>${PHASE[key(t)]||""} Tap each set as you finish it. Finish the day, cross it off — wherever you did it.</p>
+      <p>${PHASE[vkey(t)]||""} Tap each set as you finish it. Finish the day, cross it off — wherever you did it.</p>
     </div>
     <div class="streak">
       <div class="box"><div class="num">${st.cur}</div><div class="cap">Day streak</div></div>
@@ -786,10 +805,10 @@ function renderCal(){
   $("#view-cal").innerHTML = `
     <div class="cal-head">
       <button onclick="moveCal(-1)" ${calIdx===0?"disabled":""}>‹</button>
-      <h2>${MNAME[k]}</h2>
+      <h2>${mname(k)}</h2>
       <button onclick="moveCal(1)" ${calIdx===MONTHS.length-1?"disabled":""}>›</button>
     </div>
-    <div class="note" style="margin-top:4px">${PHASE[k]}</div>
+    <div class="note" style="margin-top:4px">${PHASE[vkey(new Date(k + "-15T12:00:00"))]||""}</div>
     <div class="cal-grid">${cells}</div>
     <div id="calDay" style="margin-top:14px">${dayCardHTML(openDate.startsWith(k)? openDate : iso(new Date(y,m-1,1)))}</div>`;
 }
@@ -915,8 +934,16 @@ function renderPlaybook(){
         <input type="number" id="plate-in" placeholder="e.g. 325" oninput="plateOut()" style="max-width:130px">
         <div id="plate-out" style="font-weight:700"></div>
       </div></div>
+    <div class="card"><h2>Account &amp; Cloud Sync</h2><div id="fb-box">${fbBoxHTML()}</div></div>
+    <div class="card"><h2>Program Start</h2><div class="rules">
+      <p>The whole offseason — recovery weeks, the monthly weight waves, testing days — is anchored to the <b>first Monday after the season ends</b>. Season still going? Push this date out and every week slides with it.</p>
+      <p>Current start: <b>${fmtD(progStart())}</b></p>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px">
+        <input type="date" id="prog-start" value="${progStart()}">
+        <button class="btn small" onclick="saveProgStart()">Save start date</button>
+      </div></div></div>
     <div class="card"><h2>Backup / Share Progress</h2>
-      <p class="rules">Progress is saved on this device. Export a backup file, or send it to Dad so he can load it and see everything.</p>
+      <p class="rules">When you are signed in above, progress syncs to the cloud automatically. Export a backup file anytime as an extra copy.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
         <button class="btn small" onclick="exportData()">Export backup</button>
         <label class="btn small ghost" style="margin:0">Import backup<input type="file" accept=".json" style="display:none" onchange="importData(event)"></label>
@@ -975,6 +1002,101 @@ document.querySelectorAll("nav.tabs button").forEach(b=>{
     window.scrollTo({top:0});
   });
 });
+
+/* ============ PROGRAM START ACTION ============ */
+function saveProgStart(){
+  const v = (document.getElementById("prog-start") || {}).value;
+  if(!v) return;
+  S.progStart = iso(weekMonday(new Date(v + "T12:00:00")));
+  save();
+  MONTHS = calMonths(); calIdx = Math.max(0, MONTHS.indexOf(key(new Date())));
+  renderPlaybook(); renderCal(); renderHome();
+  alert("Program now starts " + fmtD(progStart()) + " — every week slid to match.");
+}
+
+/* ============ CLOUD SYNC (Firebase) ============ */
+/* FIREBASE CONFIG — filled in when the project is ready */
+const firebaseConfig = { apiKey: "AIzaSyCoSlthSLQZbDsFDiluQBWMynx9Ih4CchY", authDomain: "road-to-d1.firebaseapp.com", projectId: "road-to-d1", storageBucket: "road-to-d1.firebasestorage.app", messagingSenderId: "38066448182", appId: "1:38066448182:web:f28620e5cba9c1c9acf597" };
+let fbUser = null, fbDb = null, fbInit = false, fbPushTimer = null;
+let fbStatusMsg = "Not signed in — data lives on this device only.";
+function fbTime(){ return new Date().toLocaleTimeString("en-US", {hour:"numeric", minute:"2-digit"}); }
+function fbSetStatus(m){ fbStatusMsg = m; const el = document.getElementById("fb-status"); if(el) el.textContent = m; }
+function shouldAdopt(remote){ return (remote._u || 0) > (S._u || 0); }
+function cloudPush(){ if(!fbUser || !fbDb) return; clearTimeout(fbPushTimer); fbPushTimer = setTimeout(cloudPushNow, 700); }
+function cloudPushNow(){
+  if(!fbUser || !fbDb) return;
+  if(!S._u){ S._u = Date.now(); localStorage.setItem(LS, JSON.stringify(S)); }
+  const data = JSON.parse(JSON.stringify(S));
+  fbDb.collection("family").doc("jake").set(data)
+    .then(() => fbSetStatus("Synced · " + fbTime()))
+    .catch(() => fbSetStatus("Offline — saved on this device, will sync when back online."));
+}
+function fbAdopt(remote){
+  S = remote;
+  S.marks = S.marks || {}; S.latest = S.latest || {}; S.tm = S.tm || {}; S.frame = S.frame || {};
+  S.fuel = S.fuel || {}; S.readiness = S.readiness || {}; S.logs = S.logs || {}; S.avoids = S.avoids || [];
+  S.schoolLog = S.schoolLog || {}; S.schoolWeeks = S.schoolWeeks || {};
+  localStorage.setItem(LS, JSON.stringify(S));
+  MONTHS = calMonths(); calIdx = Math.max(0, Math.min(MONTHS.length - 1, MONTHS.indexOf(key(new Date()))));
+  rerender(); renderProgress(); refreshGoal();
+}
+function fbBoxHTML(){
+  if(fbUser) return `<div class="rules">
+    <p>Signed in as <b>${fbUser.email}</b> — this account can view AND edit. Every save syncs to the cloud automatically, and changes from the other device show up here.</p>
+    <p id="fb-status" style="margin-top:6px">${fbStatusMsg}</p>
+    <button class="btn small ghost" style="margin-top:8px" onclick="fbSignOut()">Sign out</button></div>`;
+  return `<div class="rules">
+    <p>Sign in once on each phone and Jake's data syncs between them — nothing is lost if a phone is replaced. Jake uses <b>jakem8764@gmail.com</b>, Dad uses <b>johnmorris560@gmail.com</b>. First time on this device? Tap <b>Create account</b> and pick your own password. (Any other email can create an account, but the database refuses it — only these two can open the data.)</p>
+    <div style="display:flex;flex-direction:column;gap:8px;margin-top:10px">
+      <input type="email" id="fb-email" placeholder="Email" autocomplete="email">
+      <input type="password" id="fb-pass" placeholder="Password" autocomplete="current-password">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn small" onclick="fbSignIn()">Sign in</button>
+        <button class="btn small ghost" onclick="fbSignUp()">Create account</button>
+      </div>
+      <div id="fb-err" style="color:var(--orange);font-weight:700"></div>
+      <p id="fb-status">${fbStatusMsg}</p>
+    </div></div>`;
+}
+function fbCreds(){ return { e: ((document.getElementById("fb-email") || {}).value || "").trim().toLowerCase(), p: (document.getElementById("fb-pass") || {}).value || "" }; }
+function fbErr(err){ const el = document.getElementById("fb-err"); if(el) el.textContent = err.message; }
+function fbSignIn(){ const c = fbCreds(); if(!c.e || !c.p){ fbErr({message:"Enter email and password."}); return; } firebase.auth().signInWithEmailAndPassword(c.e, c.p).catch(fbErr); }
+function fbSignUp(){ const c = fbCreds(); if(!c.e || !c.p){ fbErr({message:"Enter email and password."}); return; } firebase.auth().createUserWithEmailAndPassword(c.e, c.p).catch(fbErr); }
+function fbSignOut(){ firebase.auth().signOut(); }
+function fbSubscribe(){
+  fbDb.collection("family").doc("jake").onSnapshot(snap => {
+    if(!snap.exists){
+      fbInit = true;
+      const has = Object.keys(S.marks || {}).length || Object.keys(S.logs || {}).length || Object.keys(S.latest || {}).length;
+      if(has) cloudPushNow(); else fbSetStatus("Signed in — cloud is empty, this device starts the record.");
+      return;
+    }
+    const remote = snap.data();
+    if(!fbInit){
+      fbInit = true;
+      if((remote._u || 0) >= (S._u || 0)) fbAdopt(remote); else cloudPushNow();
+      fbSetStatus("Synced · " + fbTime());
+      return;
+    }
+    if(shouldAdopt(remote)){ fbAdopt(remote); fbSetStatus("Updated from the other device · " + fbTime()); }
+  }, () => fbSetStatus("Sync paused — working on this device, will retry."));
+}
+function fbInitApp(){
+  if(firebaseConfig.apiKey.indexOf("REPLACE") === 0){ fbSetStatus("Sync isn't switched on yet — data lives on this device only."); return; }
+  try{
+    if(typeof firebase === "undefined"){ fbSetStatus("Sync library didn't load — app works on this device only."); return; }
+    firebase.initializeApp(firebaseConfig);
+    fbDb = firebase.firestore();
+    firebase.auth().onAuthStateChanged(u => {
+      fbUser = u;
+      if(u){ fbSetStatus("Signed in as " + u.email + " — syncing…"); fbSubscribe(); }
+      else { fbInit = false; fbSetStatus("Not signed in — data lives on this device only."); }
+      if(!$("#view-playbook").classList.contains("hidden")) renderPlaybook();
+    });
+  }catch(e){ fbSetStatus("Sync unavailable — app works on this device only."); }
+}
+fbInitApp();
+
 renderHome(); refreshGoal();
 </script>
 </body>
