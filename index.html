@@ -239,6 +239,7 @@ function sessionFor(date){
       {n:"Incline DB Press", d:"3 sets x 10, heaviest DBs you control (start 40-50s).", sets:3},
       {n:"Bulgarian Split Squat", d:"3 sets x 6 each leg. Add load when easy.", sets:3, demo:"split"},
       {n:"Lat Pulldown / Pull-ups", d:"3 sets x 8-10.", sets:3},
+      {n:"Nordic Curl Eccentrics", d:"3 sets x 3-5 SLOW lowers (5 sec down), partner holding ankles or heels hooked. Hamstring armor — the #1 injury-proofing drill for sprinting athletes. Assist with hands on the way back up.", sets:3},
       {n:"Face Pulls + Triceps", d:"Face pulls 2x15. Pushdowns 2x12.", sets:2}]},
     5:{title:"Power Day", kind:"power", ex:[
       {n:"Hang Clean", d:`Warm-up: bike 3 min, A-skips, pogo hops x10, med-ball pass x5.\nRamp: 95x3, 135x2 → Work: ${cN} sets x ${cr} reps @ ${clW} lb. Fast and clean — ugly catch, drop 10 lb.`, sets:cN, demo:"clean"},
@@ -252,7 +253,7 @@ function sessionFor(date){
       {n:"Sled Push / Hill Sprint", d:"4 x 15 yd (if available).", sets:4},
       {n:"Bear Crawl", d:"3 x 15 yd finisher.", sets:3}]},
     0:{title:"Rest Day", kind:"rest", ex:[
-      {n:"Recover", d:"Mobility flow 10 min (hips, ankles, T-spine), walk, eat big, sleep 9 hours. Growth happens today.", sets:0, demo:"hip"}]}
+      {n:"Weigh In + Recover", d:"Morning: weigh yourself and log it in Progress (growth tracking — the number should creep UP slowly). Mobility flow 10 min (hips, ankles, T-spine), walk, eat big, sleep 9 hours. Growth happens today.", sets:0, demo:"hip"}]}
   };
   return byDay[wd];
 }
@@ -345,7 +346,31 @@ function renderHome(){
       <div class="box"><div class="num">${st.total}</div><div class="cap">Days crossed off</div></div>
       <div class="box"><div class="num">${Math.round(overallProgress()*100)}%</div><div class="cap">To the goal</div></div>
     </div>
-    <div id="todayCard">${dayCardHTML(tIso)}</div>`;
+    <div id="todayCard">${dayCardHTML(tIso)}</div>
+    ${fuelCardHTML(tIso)}`;
+}
+const FUEL = [
+  ["creatine","Creatine monohydrate — 5 g, any time, with food"],
+  ["multi","Multivitamin — with breakfast"],
+  ["protein","Protein target hit — 160-185 g today"],
+  ["water","Water — about a gallon across the day"],
+  ["sleep","Slept 9 hours last night"]];
+function fuelCardHTML(di){
+  const f = (S.fuel && S.fuel[di]) || {};
+  const rows = FUEL.map(([k,label])=>`
+    <div class="exrow" style="display:flex;align-items:center;gap:12px">
+      <button class="setdot ${f[k]?"done":""}" style="flex:0 0 auto" onclick="toggleFuel('${di}','${k}')">${f[k]?"✓":""}</button>
+      <div class="dt" style="margin:0;font-size:15px;color:var(--text)">${label}</div>
+    </div>`).join("");
+  const n = FUEL.filter(([k])=>f[k]).length;
+  return `<div class="card"><span class="tag ${n===FUEL.length?"hot":""}">Daily fuel — ${n}/${FUEL.length}</span>
+    <h2 style="margin-top:8px">Supplements & Fuel Check</h2>
+    <div class="note">Training is the signal. This is the building material. Check these off every day, training day or not.</div>
+    ${rows}</div>`;
+}
+function toggleFuel(di, k){
+  S.fuel = S.fuel || {}; S.fuel[di] = S.fuel[di] || {};
+  S.fuel[di][k] = !S.fuel[di][k]; save(); renderHome();
 }
 function renderCal(){
   const k = MONTHS[calIdx];
@@ -421,6 +446,21 @@ function renderPlaybook(){
       <p><b>5.</b> Lifted heavy at school? The day still counts — cross it off with <span class="kbd">Did it at school</span>. Don't stack a second heavy session.</p>
       <p><b>6.</b> Protein 160-185 g/day. Creatine 5 g/day with food. Sleep 9 hours — that's when the growth and the gains happen.</p></div></div>
     <div class="card"><h2>Movement Demos</h2><ul class="demos">${demos}</ul></div>
+    <div class="card"><h2>Fuel: Meal Plan</h2><div class="rules">
+      <p>At ~250 lb and still growing, the target is <b>160-185 g protein</b> and enough total food to gain slowly — roughly <b>3,400-3,800 calories</b> on training days. A day that works:</p>
+      <p><b>Breakfast:</b> 4 eggs, oatmeal, banana, glass of milk (~35 g protein) + multivitamin.</p>
+      <p><b>School lunch + shake:</b> whatever lunch is, plus a whey shake or chocolate milk (~40 g).</p>
+      <p><b>Pre-training:</b> PB sandwich + banana (~20 g) — fuel in the tank, not training on empty.</p>
+      <p><b>Dinner (post-training):</b> the big one — meat, rice or potatoes, vegetables, milk (~55 g).</p>
+      <p><b>Before bed:</b> Greek yogurt or cottage cheese + berries (~25 g) — slow protein working overnight.</p>
+      <p><b>Creatine monohydrate 5 g</b> goes in any meal or shake, every day — training day or not. Timing doesn't matter; never missing does. Whey is just a tool for hitting the protein number, not magic. In the dark winter months a vitamin D3 with breakfast is a sensible add — ask his doctor at the next visit.</p></div></div>
+    <div class="card"><h2>Sleep: The Legal PED</h2><div class="rules">
+      <p><b>9 hours. Non-negotiable.</b> Here's why it's in the program next to squats:</p>
+      <p><b>Growth hormone:</b> the biggest daily pulse of GH — the hormone literally building his frame and muscle — fires during deep sleep. A growing 14-year-old cutting sleep is cutting his own growth off at the knees.</p>
+      <p><b>Muscle repair:</b> the day's training is the damage order; sleep is when the repair crew works. Protein before bed + 9 hours = the gains actually land.</p>
+      <p><b>Speed & skill:</b> sprint mechanics, change of direction, hand fighting — motor learning consolidates overnight. He wakes up better at what he practiced yesterday, or he doesn't.</p>
+      <p><b>Injury risk:</b> in a published study of adolescent athletes, sleeping under 8 hours a night came with roughly <b>1.7x the injury rate</b>. Sleep is injury prevention.</p>
+      <p><b>The routine:</b> same wake time every day, screens off 30 min before bed, cool dark room, bed by ~9:30-10 for a school-day wake-up. The Daily Fuel check on the Today tab tracks it like a lift — because it is one.</p></div></div>
     <div class="card"><h2>Backup / Share Progress</h2>
       <p class="rules">Progress is saved on this device. Export a backup file, or send it to Dad so he can load it and see everything.</p>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
