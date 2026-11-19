@@ -127,7 +127,7 @@ table.bench td:first-child,table.bench th:first-child{text-align:left}
       </div>
     </div>
     <div class="goalbar">
-      <div class="row"><span>Goal: D1 scholarship — overall progress</span><b id="goalPct">0%</b></div>
+      <div class="row"><span>2027 Preseason Goals — overall progress</span><b id="goalPct">0%</b></div>
       <div class="bar"><div id="goalFill" style="width:0%"></div></div>
     </div>
   </header>
@@ -183,15 +183,15 @@ const DEMO = {
   carry:"https://www.youtube.com/results?search_query=farmer+carry+form+grip",
   hip:"https://www.youtube.com/results?search_query=90+90+hip+mobility+drill" };
 const METRICS = [
-  {k:"squat", n:"Squat", u:"lb", base:405, est:"430-445", goal:475, stretch:500, up:1},
-  {k:"bench", n:"Bench", u:"lb", base:235, est:"250-260", goal:280, stretch:295, up:1},
-  {k:"clean", n:"Clean", u:"lb", base:235, est:"250-260", goal:280, stretch:295, up:1},
-  {k:"ten", n:"10-yard", u:"sec", base:1.97, est:"", goal:1.85, stretch:1.80, up:0},
-  {k:"forty", n:"40-yard", u:"sec", base:5.81, est:"", goal:5.55, stretch:5.40, up:0},
-  {k:"shuttle", n:"Shuttle 5-10-5", u:"sec", base:5.29, est:"", goal:4.95, stretch:4.85, up:0},
-  {k:"ldrill", n:"L-drill", u:"sec", base:8.96, est:"", goal:8.40, stretch:8.20, up:0},
-  {k:"broad", n:"Broad jump", u:"in", base:83.7, est:"", goal:92, stretch:96, up:1},
-  {k:"vert", n:"Vertical", u:"in", base:17.6, est:"", goal:22, stretch:24, up:1} ];
+  {k:"squat", n:"Squat", u:"lb", base:405, est:"430-445", goal:475, stretch:500, up:1, w:14},
+  {k:"bench", n:"Bench", u:"lb", base:235, est:"250-260", goal:280, stretch:295, up:1, w:9},
+  {k:"clean", n:"Clean", u:"lb", base:235, est:"250-260", goal:280, stretch:295, up:1, w:13},
+  {k:"ten", n:"10-yard", u:"sec", base:1.97, est:"", goal:1.85, stretch:1.80, up:0, w:15},
+  {k:"forty", n:"40-yard", u:"sec", base:5.81, est:"", goal:5.55, stretch:5.40, up:0, w:6},
+  {k:"shuttle", n:"Shuttle 5-10-5", u:"sec", base:5.29, est:"", goal:4.95, stretch:4.85, up:0, w:16},
+  {k:"ldrill", n:"L-drill", u:"sec", base:8.96, est:"", goal:8.40, stretch:8.20, up:0, w:8},
+  {k:"broad", n:"Broad jump", u:"in", base:83.7, est:"", goal:92, stretch:96, up:1, w:9},
+  {k:"vert", n:"Vertical", u:"in", base:17.6, est:"", goal:22, stretch:24, up:1, w:10} ];
 
 /* ============ STATE ============ */
 const LS = "roadToD1.v1";
@@ -341,11 +341,16 @@ function schoolSessionsForWeek(anyDate){
   const mon = weekMonday(anyDate); const out = {};
   for (let i = 0; i < 7; i++){
     const dt = new Date(mon); dt.setDate(dt.getDate() + i); const di = iso(dt);
-    if (S.schoolPlan && S.schoolPlan[di]) out[di] = S.schoolPlan[di];
     if (S.schoolLog && S.schoolLog[di]) out[di] = S.schoolLog[di];
   }
   return out;
 }
+function plannedSchoolDays(anyDate){
+  const mon = weekMonday(anyDate); const wk = iso(mon);
+  const list = (S.schoolWeeks && S.schoolWeeks[wk]) || [];
+  return new Set(list);
+}
+function plannedSchoolDay(di){ return plannedSchoolDays(new Date(di + "T12:00:00")).has(di); }
 function weekOverrides(anyDate){
   const mon = weekMonday(anyDate);
   const days = []; for (let i = 0; i < 7; i++){ const dt = new Date(mon); dt.setDate(dt.getDate() + i); days.push(dt); }
@@ -364,6 +369,12 @@ function weekOverrides(anyDate){
     }
     if (myS && !emph){
       ov[di] = { type:"note", note:"School lifting today (" + myS + ") plus this session — keep this one technical and fresh." + (((myS === "lower" || myS === "both") && (sess.kind === "speed" || sess.kind === "cond")) ? " Cut sprint volume in half." : "") };
+      return;
+    }
+    if (!myS && plannedSchoolDays(anyDate).has(di)){
+      ov[di] = { type:"note", note: emph
+        ? "Team lifting today (planned). If the team works the same muscles as this session, do theirs, then cross the day off with the school button and pick upper/lower — the rest of the week reshuffles from what actually happened. If they worked the other half, this session still stands."
+        : "Team lifting today (planned) plus this session. After the team session, log upper/lower with the school cross-off and the week adjusts from there." };
       return;
     }
     if (emph && idx > 0){
@@ -417,25 +428,36 @@ function crossOffSchool(di, type){
 let SP = null;
 function schoolWeekCard(){
   const mon = weekMonday(new Date());
-  if (!SP){ SP = {}; for (let i = 0; i < 5; i++){ const dt = new Date(mon); dt.setDate(dt.getDate() + i); const di = iso(dt); SP[di] = (S.schoolPlan && S.schoolPlan[di]) || ""; } }
+  const wkKey = iso(mon);
+  if (S.schoolWeeks && S.schoolWeeks[wkKey]) return "";
+  if (!SP){
+    SP = {};
+    const prevMon = new Date(mon); prevMon.setDate(prevMon.getDate() - 7);
+    const prev = (S.schoolWeeks && S.schoolWeeks[iso(prevMon)]) || [];
+    const prevOffsets = new Set(prev.map(di => { const d = new Date(di + "T12:00:00"); return (d.getDay() + 6) % 7; }));
+    for (let i = 0; i < 5; i++){
+      const dt = new Date(mon); dt.setDate(dt.getDate() + i);
+      SP[iso(dt)] = prevOffsets.has(i);
+    }
+  }
   const rows = [];
   for (let i = 0; i < 5; i++){
     const dt = new Date(mon); dt.setDate(dt.getDate() + i); const di = iso(dt);
-    const opts = [["","—"],["lower","Lower"],["upper","Upper"],["both","Both"]].map(([v,l]) =>
-      `<button class="rbtn ${SP[di]===v?"sel":""}" style="width:auto;padding:0 10px;height:38px;font-size:13px" onclick="setSP('${di}','${v}')">${l}</button>`).join("");
-    rows.push(`<div style="display:flex;align-items:center;gap:6px;margin:7px 0">
-      <div style="width:96px;font-weight:700;font-size:14px">${dt.toLocaleDateString("en-US",{weekday:"short", month:"numeric", day:"numeric"})}</div>${opts}</div>`);
+    rows.push(`<div style="display:flex;align-items:center;gap:8px;margin:7px 0">
+      <div style="width:110px;font-weight:700;font-size:14px">${dt.toLocaleDateString("en-US",{weekday:"short", month:"numeric", day:"numeric"})}</div>
+      <button class="rbtn ${SP[di]?"sel":""}" style="width:auto;padding:0 14px;height:38px;font-size:13px" onclick="setSP('${di}')">${SP[di] ? "✓ Lifting with team" : "Not lifting"}</button></div>`);
   }
   return `<div class="card"><span class="tag">Start of week</span>
     <h2 style="margin-top:8px">School Lifting This Week</h2>
-    <div class="note">How many days is he lifting at school this week, and which are upper / lower? Set it once — those days get marked ahead, and the rest of the week reshuffles itself around them so nothing doubles up.</div>
+    <div class="note">Which days is he lifting with the team this week? Upper/lower doesn't get decided ahead of time — just mark the days. After each team session he logs what they actually did (upper/lower) with the school cross-off, and the rest of the week reshuffles itself. Hit save and this card goes away until next week — it'll come back with these same days filled in, so if nothing changed he just hits save again.</div>
     ${rows.join("")}
-    <button class="btn" style="width:100%;margin-top:10px" onclick="saveSchoolPlan()">Save This Week's Plan</button></div>`;
+    <button class="btn" style="width:100%;margin-top:10px" onclick="saveSchoolWeek()">Save This Week</button></div>`;
 }
-function setSP(di, v){ SP[di] = v; renderHome(); }
-function saveSchoolPlan(){
-  S.schoolPlan = S.schoolPlan || {};
-  Object.keys(SP).forEach(di => { if (SP[di]) S.schoolPlan[di] = SP[di]; else delete S.schoolPlan[di]; });
+function setSP(di){ SP[di] = !SP[di]; renderHome(); }
+function saveSchoolWeek(){
+  const mon = weekMonday(new Date()); const wkKey = iso(mon);
+  S.schoolWeeks = S.schoolWeeks || {};
+  S.schoolWeeks[wkKey] = Object.keys(SP).filter(di => SP[di]).sort();
   save(); SP = null; renderHome(); renderCal();
 }
 
@@ -626,9 +648,9 @@ function progressOf(m){
   return Math.max(0, Math.min(1, p));
 }
 function overallProgress(){
-  const ps = METRICS.map(progressOf).filter(x => x !== null);
-  if(!ps.length) return 0;
-  return ps.reduce((a,b)=>a+b,0)/ps.length;
+  let tot = 0, wsum = 0;
+  METRICS.forEach(m => { const p = progressOf(m); tot += (p === null ? 0 : p) * m.w; wsum += m.w; });
+  return wsum ? tot / wsum : 0;
 }
 function streaks(){
   let total = 0; const today = new Date(); let cur = 0, run = true;
@@ -665,7 +687,7 @@ function dayCardHTML(dateIsoStr){
       ${e.sets?`<div class="sets">${dots}</div>`:""}</div>`;
   }).join("");
   return `<div class="card">
-    <span class="tag ${mark.done?"hot":""}">${mark.done? "✓ Crossed off" + (mark.where==="school"?" — at school (" + (mark.schoolType||"") + ")":"") : "Planned"}</span>
+    <span class="tag ${mark.done?"hot":""}">${mark.done? "✓ Crossed off" + (mark.where==="school"?" — at school (" + (mark.schoolType||"") + ")":"") : (plannedSchoolDay(dateIsoStr) ? "Team lifting planned" : "Planned")}</span>
     <h2 style="margin-top:8px">${sess.title}</h2>
     <div class="note">${dateLbl} · ${PHASE[key(d)]||""}</div>${sess.adjNote?`<div class="note" style="color:var(--volt);margin-top:4px">⚠ ${sess.adjNote}</div>`:""}
     ${ex}
@@ -762,7 +784,7 @@ function renderProgress(){
     const p = progressOf(m); const pct = p===null? 0 : Math.round(p*100);
     const lat = S.latest[m.k] ?? "";
     return `<div class="metric"><div class="top"><span class="nm">${m.n}</span>
-      <span class="nums">Start <b style="color:var(--text)">${m.base}</b> → Goal <b>${m.goal}</b> · Stretch ${m.stretch} ${m.u}</span></div>
+      <span class="nums">Start <b style="color:var(--text)">${m.base}</b> → Goal <b>${m.goal}</b> · Stretch ${m.stretch} ${m.u} · Counts ${m.w}% of the goal</span></div>
       <div class="bar"><div style="width:${pct}%"></div></div>
       <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
         <input type="number" step="any" id="lat-${m.k}" value="${lat}" placeholder="My latest (${m.u})" style="max-width:170px">
@@ -771,7 +793,7 @@ function renderProgress(){
   }).join("");
   $("#view-progress").innerHTML = `
     <div class="card"><h2>The Numbers I'm Chasing</h2>
-      <div class="note">Verified summer 2026 baselines on the left. Log new numbers after any testing day and watch the bars slide.</div>
+      <div class="note">Verified summer 2026 baselines on the left. Log new numbers after any testing day and watch the bars slide. Each goal is weighted by how much it moves his 2027 season — for a nose guard, change of direction and get-off count most, the 40 least. The bar at the top only reaches 100% when EVERY goal is hit.</div>
       ${rows}</div>
     <div class="card"><h2>My Frame</h2>
       <label class="lbl">Height (e.g. 6'3")</label><input type="text" id="fr-h" value="${S.frame.h||""}" placeholder="~6'3 — verify this winter">
