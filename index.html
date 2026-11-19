@@ -175,6 +175,9 @@ const DEMO = {
   boxjump:"https://www.youtube.com/results?search_query=box+jump+technique+land+soft",
   medball:"https://www.youtube.com/results?search_query=medicine+ball+throw+drills+football+power",
   shuttle:"https://www.youtube.com/results?search_query=5-10-5+pro+agility+shuttle+technique",
+  latbound:"https://www.youtube.com/results?search_query=lateral+bounds+skater+jump+technique+athletes",
+  cut:"https://www.youtube.com/results?search_query=90+degree+cut+drill+change+of+direction+football",
+  wave:"https://www.youtube.com/results?search_query=defensive+line+wave+drill+lateral+movement",
   getoff:"https://www.youtube.com/results?search_query=defensive+line+get+off+drills+nose+guard",
   hands:"https://www.youtube.com/results?search_query=defensive+line+hand+fighting+drills",
   carry:"https://www.youtube.com/results?search_query=farmer+carry+form+grip",
@@ -233,14 +236,17 @@ function sessionFor(date){
       {n:"Walking Lunges", d:"2 sets x 8 each leg, bodyweight or light DBs", sets:2},
       {n:"Neck + Grip", d:"Neck work 2x15 light. Farmer hold 2x30 sec, heavy.", sets:2, demo:"carry"}]},
     2:{title:"Speed & Agility", kind:"speed", ex:[
-      {n:"Warm-up", d:"Jog, high knees, A-skips, leg swings — 10 min.", sets:0},
+      {n:"Warm-up", d:"Jog, high knees, A-skips, leg swings, karaoke (cross-over run) 2x15 yd each way, lateral shuffles 2x10 yd — 10 min.", sets:0},
       {n:"Stance-and-Start (10-yd)", d:"From your 3-point DL stance: 6 reps x 10 yd, walk back, full rest.", sets:6, demo:"getoff"},
       {n:"20-yd Buildups", d:"4 reps, smooth to fast.", sets:4},
       {n:"5-10-5 Shuttle Practice", d:"4 reps (2 each direction). Low hips, plant foot outside.", sets:4, demo:"shuttle"},
+      {n:"Lateral Bounds", d:"3 sets x 4 each side. Jump sideways off one leg, land on the other and STICK it — no wobble, no extra hop. Power sideways is what closes on a QB and beats a reach block.", sets:3, demo:"latbound"},
+      {n:"90° Cut Sprints", d:"4 reps: sprint 10 yd, plant hard outside foot, cut 90° and burst 5 yd (2 left, 2 right). Hips low into the plant, head up out of it.", sets:4, demo:"cut"},
       {n:"Shuffle to Sprint", d:"4 reps: 5 yd lateral shuffle → 10 yd sprint.", sets:4},
       {n:"40-yd Relaxed-Fast", d:"2 reps. Quality only — if form falls apart, the day is over.", sets:2}]},
     3:{title:"DL Craft & Hands", kind:"craft", ex:[
       {n:"Stance-and-Start", d:"On a ball/snap count: 10 reps. First step 6 inches, low pad level.", sets:10, demo:"getoff"},
+      {n:"Wave Drill — Lateral Steps", d:"4 x 15 sec: in your stance, quick lateral steps left-right-left on command (or alternate every 2 steps), staying LOW — no standing up, no crossing feet. This is pass-rush counter and down-the-line pursuit movement.", sets:4, demo:"wave"},
       {n:"Fit-and-Lockout Holds", d:"Vs a pad/partner: 5 x 5 sec at FULL arm extension. Use the 6'8\" wingspan.", sets:5, demo:"hands"},
       {n:"Stab-and-Rip", d:"6 each side: one-arm stab, rip through.", sets:6, demo:"hands"},
       {n:"Hand Fighting Mirror Rounds", d:"4 x 20 sec: club, chop, swipe — hands at arm's length.", sets:4, demo:"hands"},
@@ -833,7 +839,7 @@ function renderPlaybook(){
   const demos = [["Back Squat","squat"],["Bench Press","bench"],["Hang Clean","clean"],["Romanian Deadlift","rdl"],
     ["Barbell Row","row"],["Bulgarian Split Squat","split"],["Box Jump","boxjump"],["Med-Ball Throws","medball"],
     ["5-10-5 Shuttle","shuttle"],["DL Get-Off / Stance & Start","getoff"],["DL Hand Fighting","hands"],
-    ["Farmer Carry","carry"],["90/90 Hip Mobility","hip"]]
+    ["Farmer Carry","carry"],["90/90 Hip Mobility","hip"],["Lateral Bounds","latbound"],["90° Cut Sprints","cut"],["Wave Drill (Lateral)","wave"]]
     .map(([n,k])=>`<li><a href="${DEMO[k]}" target="_blank" rel="noopener">${n}<span>▶ Watch</span></a></li>`).join("");
   $("#view-playbook").innerHTML = `
     <div class="card"><h2>How The Weights Climb</h2><div class="rules">
@@ -847,6 +853,10 @@ function renderPlaybook(){
       <p><b>4.</b> Growth spurt (an inch+ in a quarter): jump volume drops a third, top loads hold, extra hip/hamstring mobility daily.</p>
       <p><b>5.</b> Lifted heavy at school? The day still counts — cross it off with <span class="kbd">Did it at school</span>. Don't stack a second heavy session.</p>
       <p><b>6.</b> Protein 160-185 g/day. Creatine 5 g/day with food. Sleep 9 hours — that's when the growth and the gains happen.</p></div></div>
+    <div class="card"><h2>LAB Sports Performance</h2><div class="rules">
+      <p>Jake trains speed at <b>LAB Sports Performance</b> in Roanoke — schedule being set. LAB days are coached speed work: acceleration, top speed, and change of direction under a coach's eye.</p>
+      <p><b>How it fits:</b> LAB does NOT replace the app's Tuesday work — it sharpens it. On a week with a LAB session, Tuesday's app speed work stays but the lateral block (bounds, cuts, wave drill) is the homework between LAB visits. If a LAB session lands the day before a heavy lift day, the readiness check decides the weights, as always.</p>
+      <p>When the LAB schedule is set, tell Dad — the app calendar can mark LAB days.</p></div></div>
     <div class="card"><h2>Movement Demos</h2><ul class="demos">${demos}</ul></div>
     <div class="card"><h2>Fuel: Meal Plan</h2><div class="rules">
       <p>At ~250 lb and still growing, the target is <b>160-185 g protein</b> and enough total food to gain slowly — roughly <b>3,400-3,800 calories</b> on training days. A day that works:</p>
